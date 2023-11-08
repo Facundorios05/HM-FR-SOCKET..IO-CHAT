@@ -1,7 +1,10 @@
 <!DOCTYPE html>
+<html lang="en">
 <html>
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socket.IO chat</title>
     <style>
         body {
@@ -67,39 +70,82 @@
         <input id="input" autocomplete="off" /><button>Send</button>
     </form>
 
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         var socket = io();
         var messagesContainer = document.getElementById('messages')
         var form = document.getElementById('form');
         var input = document.getElementById('input');
-
+        var username
         const addOldMessages = async () => {
-            const response = await fetch('hhtp://localhost:3000/api/messages')
-            messages.map(function (msg) {
-                var item = document.createElement('li');
-                item.textContent = msg;
-                messagesContainer.appendChild(item);
-                window.scrollTo(0, document.body.scrollHeight);
-            });
+            await fetch('/api/messages')
+                .then(response => response.json())
+                .then(data => {
+                    data.map((msg) => {
+                        var item = document.createElement('li');
+                        item.textContent = msg.user + ': ' + msg.message;
+                        messagesContainer.appendChild(item);
+                        window.scrollTo(0, document.body.scrollHeight);
+                    })
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+
+
         }
+        document.addEventListener('DOMContentLoaded', () => {
+            addOldMessages()
+            swal.fire({
+                title: "Ingrese su nombre de usuario que se mostrará en la sala",
+                input: "text",
+                inputAttributes: {
+                    autocapitalize: "off"
+                },
+                confirmButtonText: "Aceptar",
+                showLoaderOnConfirm: true,
+                preConfirm: async (login) => {
+                    try {
 
+                    }
+                    catch (error) {
+                        Swal.showValidationMessage(`
+        Error: ${error}
+      `);
+                    }
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((login) => {
+                if (login.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: `${login.value} registrado correctamente`,
+                    });
+                    username = login.value
+                    console.log('aaa pene', username);
+                    socket.emit("new-user", username);
+                }
+            });
+        })
 
-
-        form.addEventListener('submit', function (e) {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value) {
-                socket.emit('chat message', input.value);
+                socket.emit('chat message', { user: username, message: input.value })
                 input.value = '';
             }
         });
 
-        socket.on('chat message', function (msg) {
+
+        socket.on('chat message', (data) => {
             var item = document.createElement('li');
-            item.textContent = msg;
+            item.textContent = data.user + ': ' + data.msg;
             messagesContainer.appendChild(item);
             window.scrollTo(0, document.body.scrollHeight);
         });
+
     </script>
 </body>
 
